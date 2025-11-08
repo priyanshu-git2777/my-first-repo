@@ -161,11 +161,11 @@ function checkAlarms(){
   });
 }
 
-// start intervals
+
 setInterval(updateClock, 1000);
 setInterval(checkAlarms, 1000);
 
-// wire buttons (elements exist because script is at end)
+
 document.getElementById('addAlarm').onclick = addAlarm;
 document.getElementById('stopBtn').onclick = stopAlarm;
 </script>
