@@ -186,14 +186,13 @@ public class StudentReportCard {
             System.out.println("0. Cancel");
             int c = readInt("Choose: ");
             if (c == 1) {
-                String newName = readNonEmptyString("New name (leave blank to keep): ");
+                String newName = readString("New name (leave blank to keep): ").trim();
                 if (!newName.isEmpty()) s.setName(newName);
-                String ageStr = readString("New age (leave blank to keep): ");
-                if (!ageStr.isBlank()) {
-                    try { s.setAge(Integer.parseInt(ageStr.trim())); } 
-                    catch (NumberFormatException ex) {}
+                String ageStr = readString("New age (leave blank to keep): ").trim();
+                if (!ageStr.isEmpty()) {
+                    try { s.setAge(Integer.parseInt(ageStr)); } catch (NumberFormatException ex) {}
                 }
-                String newClass = readNonEmptyString("New class (leave blank to keep): ");
+                String newClass = readString("New class (leave blank to keep): ").trim();
                 if (!newClass.isEmpty()) s.setClassName(newClass);
             } else if (c == 2) {
                 System.out.println("Current marks:");
@@ -235,4 +234,102 @@ public class StudentReportCard {
                 System.out.println("No students to export.");
                 return;
             }
-            String filename = readNonEmptyStr
+            String filename = readNonEmptyString("Enter filename (e.g., students.csv): ");
+            LinkedHashSet<String> allSubjects = new LinkedHashSet<>();
+            for (Student s : students) allSubjects.addAll(s.getMarks().keySet());
+            try (FileWriter fw = new FileWriter(filename)) {
+                fw.append("ID,Name,Age,Class,Total,Percentage,Grade,Result");
+                for (String sub : allSubjects) fw.append(",").append(escapeCSV(sub));
+                fw.append("\n");
+                for (Student s : students) {
+                    fw.append(String.valueOf(s.getId())).append(",");
+                    fw.append(escapeCSV(s.getName())).append(",");
+                    fw.append(String.valueOf(s.getAge())).append(",");
+                    fw.append(escapeCSV(s.getClassName())).append(",");
+                    fw.append(String.valueOf(s.getTotalMarks())).append(",");
+                    fw.append(String.format(Locale.US, "%.2f", s.getPercentage())).append(",");
+                    fw.append(s.getGrade()).append(",");
+                    fw.append(s.isPass() ? "PASS" : "FAIL");
+                    for (String sub : allSubjects) {
+                        fw.append(",");
+                        Integer m = s.getMarks().get(sub);
+                        fw.append(m == null ? "" : String.valueOf(m));
+                    }
+                    fw.append("\n");
+                }
+                System.out.println("Exported to " + filename);
+            } catch (IOException e) {
+                System.out.println("Error writing file: " + e.getMessage());
+            }
+        }
+
+        private String escapeCSV(String s) {
+            if (s == null) return "";
+            String out = s.replace("\"", "\"\"");
+            if (out.contains(",") || out.contains("\"") || out.contains("\n")) out = "\"" + out + "\"";
+            return out;
+        }
+
+        private void searchStudents() {
+            System.out.println("--- Search Students ---");
+            System.out.println("1. Search by ID");
+            System.out.println("2. Search by name");
+            int c = readInt("Choice: ");
+            if (c == 1) {
+                int id = readInt("Enter ID: ");
+                Student s = findById(id);
+                if (s == null) System.out.println("Not found.");
+                else printReportCard(s);
+            } else if (c == 2) {
+                String q = readNonEmptyString("Enter name text: ").toLowerCase();
+                List<Student> results = new ArrayList<>();
+                for (Student s : students)
+                    if (s.getName().toLowerCase().contains(q)) results.add(s);
+                if (results.isEmpty()) System.out.println("No matches.");
+                else for (Student s : results)
+                    System.out.printf("%d - %s (Class %s, %.2f%%)\n", s.getId(), s.getName(), s.getClassName(), s.getPercentage());
+            }
+        }
+
+        private Student findById(int id) {
+            for (Student s : students) if (s.getId() == id) return s;
+            return null;
+        }
+
+        private void printMarksWithIndex(Student s) {
+            int idx = 1;
+            for (Map.Entry<String,Integer> e : s.getMarks().entrySet())
+                System.out.printf("%d. %s : %d\n", idx++, e.getKey(), e.getValue());
+        }
+
+        private String readString(String prompt) {
+            System.out.print(prompt);
+            return sc.nextLine();
+        }
+
+        private String readNonEmptyString(String prompt) {
+            while (true) {
+                System.out.print(prompt);
+                String line = sc.nextLine();
+                if (!line.trim().isEmpty()) return line.trim();
+            }
+        }
+
+        private int readInt(String prompt) {
+            while (true) {
+                System.out.print(prompt);
+                String line = sc.nextLine();
+                try { return Integer.parseInt(line.trim()); }
+                catch (NumberFormatException e) {}
+            }
+        }
+
+        private int readIntInRange(String prompt, int min, int max) {
+            while (true) {
+                int val = readInt(prompt);
+                if (val < min || val > max) continue;
+                return val;
+            }
+        }
+    }
+}
